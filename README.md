@@ -1,8 +1,10 @@
 # think-addons
 The ThinkPHP 6 Addons Package
+此扩展为原版zz-studio/think-addons扩展的修改版
+支持自定义插件目录，插件钩子手动设置改为获取数据库获取
 
 ## 安装
-> composer require zzstudio/think-addons
+> composer require 9007967/think-addons
 
 ## 配置
 
@@ -30,6 +32,7 @@ php think addons:config
 	],
     'route' => [],
     'service' => [],
+    'dir'   => 'addons'
 ];
 ```
 或者在\config目录中新建`addons.php`,内容为：
@@ -46,6 +49,7 @@ return [
     ],
     'route' => [],
     'service' => [],
+    'dir'   => 'addons'
 ];
 ```
 
