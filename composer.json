@@ -6,6 +6,10 @@
         {
             "name": "byron",
             "email": "xiaobo.sun@qq.com"
+        },
+        {
+            "name": "Blood",
+            "email": "cn.blood@foxmail.com"
         }
     ],
     "require": {
