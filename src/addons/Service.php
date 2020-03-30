@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace think\addons;
 
+use think\facade\Db;
 use think\Route;
 use think\helper\Str;
 use think\facade\Config;
@@ -28,6 +29,8 @@ class Service extends \think\Service
         Lang::load([
             $this->app->getRootPath() . '/vendor/zzstudio/think-addons/src/lang/zh-cn.php'
         ]);
+        // 数据库加载钩子
+        $this->database();
         // 自动载入插件
         $this->autoload();
         // 加载插件事件
@@ -157,6 +160,38 @@ class Service extends \think\Service
     }
 
     /**
+     * 数据库获取插件钩子列表
+     * @return bool
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    private function database()
+    {
+        $config   = Config::get('addons');
+        $database = $config['database'];
+
+        //是否使用数据库加载钩子信息
+        if (!$database) {
+            return true;
+        }
+
+        $data = Db::name($database['table'])
+            ->where('status', 1)
+            ->cache($database['cache'], $database['expire'])
+            ->field(implode(',', $database['field']))
+            ->select();
+        if (!$data->isEmpty()) {
+            foreach ($data as $key => $row) {
+                $config['hooks'] += [
+                    $row[ $database['field'][0] ] => $row[ $database['field'][1] ]
+                ];
+            }
+            Config::set($config, 'addons');
+        }
+    }
+
+    /**
      * 自动载入插件
      * @return bool
      */
@@ -176,7 +211,7 @@ class Service extends \think\Service
             // 获取插件目录名
             $name = pathinfo($info['dirname'], PATHINFO_FILENAME);
             // 找到插件入口文件
-            if (strtolower($info['filename']) === 'plugin') {
+            if (strtolower($info['filename']) === $name) {
                 // 读取出所有公共方法
                 $addonsDir = Config::get('addons.dir', 'addons');
                 $methods   = (array) get_class_methods("\\" . $addonsDir . "\\" . $name . "\\" . $info['filename']);
