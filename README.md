@@ -23,8 +23,14 @@ php think addons:config
 ```php
 'addons' => [
     // 是否自动读取取插件钩子配置信息（默认是开启）
-    'autoload' => true,
+    'autoload' => false,
     // 当关闭自动获取配置时需要手动配置hooks信息
+    'database' => [ //数据表获取钩子
+        'expire'  => 0 //查询缓存时间（单位秒，0为不缓存）
+        , 'cache' => '__hooks_data_cache__' // 钩子数据缓存标识
+        , 'table' => 'hooks' //钩子数据存放表名称
+        , 'field' => [ 'mark', 'list' ] //钩子数据读取字段 （mark = 钩子标识，list = 使用钩子的插件列表
+    ],
     'hooks' => [
 	    // 可以定义多个钩子
         'testhook'=>'test' // 键为钩子名称，用于在业务中自定义钩子处理，值为实现该钩子的插件，
@@ -32,25 +38,46 @@ php think addons:config
 	],
     'route' => [],
     'service' => [],
-    'dir'   => 'addons'
+    'dir'   => 'addons' //自定义插件文件夹
 ];
 ```
 或者在\config目录中新建`addons.php`,内容为：
 ```php
 <?php
 return [
-	// 是否自动读取取插件钩子配置信息
+	// 是否自动读取取插件钩子配置信息（默认是开启）
     'autoload' => false,
     // 当关闭自动获取配置时需要手动配置hooks信息
-    'hooks' => [
-        // 可以定义多个钩子
-        'testhook'=>'test' // 键为钩子名称，用于在业务中自定义钩子处理，值为实现该钩子的插件，
-                    // 多个插件可以用数组也可以用逗号分割
+    'database' => [ //数据表获取钩子
+        'expire'  => 0 //查询缓存时间（单位秒，0为不缓存）
+        , 'cache' => '__hooks_data_cache__' // 钩子数据缓存标识
+        , 'table' => 'hooks' //钩子数据存放表名称
+        , 'field' => [ 'mark', 'list' ] //钩子数据读取字段 （mark = 钩子标识，list = 使用钩子的插件列表
     ],
+    'hooks' => [
+	    // 可以定义多个钩子
+        'testhook'=>'test' // 键为钩子名称，用于在业务中自定义钩子处理，值为实现该钩子的插件，
+					// 多个插件可以用数组也可以用逗号分割
+	],
     'route' => [],
     'service' => [],
-    'dir'   => 'addons'
+    'dir'   => 'addons' //自定义插件文件夹
 ];
+```
+### 数据库存放钩子信息建表信息
+> 自动获取、数据表获取、手动设置获取钩子信息的方法请三选一 （设置其一的时候，其他方法请设置为 false）
+
+```sql
+CREATE TABLE `hooks` (
+  `id` int UNSIGNED NOT NULL COMMENT '主键',
+  `name` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '钩子名称',
+  `mark` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '钩子标识',
+  `list` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '钩子挂载的插件 ''，''分割',
+  `description` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT '描述',
+  `addtime` int DEFAULT NULL COMMENT '创建时间',
+  `updatetime` int UNSIGNED NOT NULL DEFAULT '0' COMMENT '更新时间',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT '0' COMMENT '钩子状态：0=停用；1=启用；'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='钩子列表' ROW_FORMAT=COMPACT;
 ```
 
 ## 创建插件
