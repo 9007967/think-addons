@@ -1,6 +1,7 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
+use think\facade\Config;
 use think\facade\Event;
 use think\facade\Route;
 use think\helper\{
@@ -15,21 +16,20 @@ use think\helper\{
 
 // 插件类库自动载入
 spl_autoload_register(function ($class) {
-
-    $class = ltrim($class, '\\');
-
-    $dir = app()->getRootPath();
-    $namespace = 'addons';
+    $class     = ltrim($class, '\\');
+    $addonsDir = Config::get('addons.dir', 'addons');
+    $dir       = app()->getRootPath();
+    $namespace = $addonsDir;
 
     if (strpos($class, $namespace) === 0) {
         $class = substr($class, strlen($namespace));
-        $path = '';
+        $path  = '';
         if (($pos = strripos($class, '\\')) !== false) {
-            $path = str_replace('\\', '/', substr($class, 0, $pos)) . '/';
+            $path  = str_replace('\\', '/', substr($class, 0, $pos)) . '/';
             $class = substr($class, $pos + 1);
         }
         $path .= str_replace('_', '/', $class) . '.php';
-        $dir .= $namespace . $path;
+        $dir  .= $namespace . $path;
 
         if (file_exists($dir)) {
             include $dir;
@@ -46,9 +46,9 @@ spl_autoload_register(function ($class) {
 if (!function_exists('hook')) {
     /**
      * 处理插件钩子
-     * @param string $event 钩子名称
+     * @param string     $event  钩子名称
      * @param array|null $params 传入参数
-     * @param bool $once 是否只返回一个结果
+     * @param bool       $once   是否只返回一个结果
      * @return mixed
      */
     function hook($event, $params = null, bool $once = false)
@@ -85,14 +85,14 @@ if (!function_exists('get_addons_instance')) {
     function get_addons_instance($name)
     {
         static $_addons = [];
-        if (isset($_addons[$name])) {
-            return $_addons[$name];
+        if (isset($_addons[ $name ])) {
+            return $_addons[ $name ];
         }
         $class = get_addons_class($name);
-        if (class_exists($class)) {
-            $_addons[$name] = new $class(app());
 
-            return $_addons[$name];
+        if (class_exists($class)) {
+            $_addons[ $name ] = new $class(app());
+            return $_addons[ $name ];
         } else {
             return null;
         }
@@ -102,29 +102,31 @@ if (!function_exists('get_addons_instance')) {
 if (!function_exists('get_addons_class')) {
     /**
      * 获取插件类的类名
-     * @param string $name 插件名
-     * @param string $type 返回命名空间类型
+     * @param string $name  插件名
+     * @param string $type  返回命名空间类型
      * @param string $class 当前类名
      * @return string
      */
     function get_addons_class($name, $type = 'hook', $class = null)
     {
-        $name = trim($name);
+        $name      = trim($name);
+        $addonsDir = Config::get('addons.dir', 'addons');
         // 处理多级控制器情况
         if (!is_null($class) && strpos($class, '.')) {
             $class = explode('.', $class);
 
-            $class[count($class) - 1] = Str::studly(end($class));
-            $class = implode('\\', $class);
+            $class[ count($class) - 1 ] = Str::studly(end($class));
+            $class                      = implode('\\', $class);
         } else {
             $class = Str::studly(is_null($class) ? $name : $class);
         }
         switch ($type) {
             case 'controller':
-                $namespace = '\\addons\\' . $name . '\\controller\\' . $class;
+                $class     = Config::get('route.controller_suffix') ? $class . 'Controller' : $class;
+                $namespace = '\\' . $addonsDir . '\\' . $name . '\\controller\\' . $class;
                 break;
             default:
-                $namespace = '\\addons\\' . $name . '\\Plugin';
+                $namespace = '\\' . $addonsDir . '\\' . $name . '\\' . $class;
         }
 
         return class_exists($namespace) ? $namespace : '';
@@ -134,35 +136,36 @@ if (!function_exists('get_addons_class')) {
 if (!function_exists('addons_url')) {
     /**
      * 插件显示内容里生成访问插件的url
-     * @param $url
-     * @param array $param
+     * @param             $url
+     * @param array       $param
      * @param bool|string $suffix 生成的URL后缀
      * @param bool|string $domain 域名
      * @return bool|string
      */
-    function addons_url($url = '', $param = [], $suffix = true, $domain = false)
+    function addons_url($url = '', $param = [], $suffix = false, $domain = false)
     {
-        $request = app('request');
+        $request   = app('request');
+        $addonsDir = Config::get('addons.dir', 'addons');
         if (empty($url)) {
             // 生成 url 模板变量
-            $addons = $request->addon;
+            $addons     = $request->addon;
             $controller = $request->controller();
             $controller = str_replace('/', '.', $controller);
-            $action = $request->action();
+            $action     = $request->action();
         } else {
             $url = Str::studly($url);
             $url = parse_url($url);
             if (isset($url['scheme'])) {
-                $addons = strtolower($url['scheme']);
+                $addons     = strtolower($url['scheme']);
                 $controller = $url['host'];
-                $action = trim($url['path'], '/');
+                $action     = trim($url['path'], '/');
             } else {
-                $route = explode('/', $url['path']);
-                $addons = $request->addon;
-                $action = array_pop($route);
+                $route      = explode('/', $url['path']);
+                $addons     = $request->addon;
+                $action     = array_pop($route);
                 $controller = array_pop($route) ?: $request->controller();
             }
-            $controller = Str::snake((string)$controller);
+            $controller = Str::snake((string) $controller);
 
             /* 解析URL带的参数 */
             if (isset($url['query'])) {
@@ -171,7 +174,6 @@ if (!function_exists('addons_url')) {
             }
         }
 
-        return Route::buildUrl("@addons/{$addons}/{$controller}/{$action}", $param)->suffix($suffix)->domain($domain);
+        return Route::buildUrl("@{$addonsDir}/{$addons}/{$controller}/{$action}", $param)->suffix($suffix)->domain($domain);
     }
 }
-
