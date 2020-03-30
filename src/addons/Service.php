@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace think\addons;
 
@@ -47,9 +47,9 @@ class Service extends \think\Service
             if (is_file($this->app->addons->getAddonsPath() . 'middleware.php')) {
                 $this->app->middleware->import(include $this->app->addons->getAddonsPath() . 'middleware.php', 'route');
             }
-
+            $addonsDir = Config::get('addons.dir', 'addons');
             // 注册控制器路由
-            $route->rule("addons/:addon/[:controller]/[:action]", $execute)->middleware(Addons::class);
+            $route->rule($addonsDir . "/:addon/[:controller]/[:action]", $execute)->middleware(Addons::class);
             // 自定义路由
             $routes = (array) Config::get('addons.route', []);
             foreach ($routes as $key => $val) {
@@ -58,14 +58,14 @@ class Service extends \think\Service
                 }
                 if (is_array($val)) {
                     $domain = $val['domain'];
-                    $rules = [];
+                    $rules  = [];
                     foreach ($val['rule'] as $k => $rule) {
-                        [$addon, $controller, $action] = explode('/', $rule);
-                        $rules[$k] = [
-                            'addons'        => $addon,
-                            'controller'    => $controller,
-                            'action'        => $action,
-                            'indomain'      => 1,
+                        [ $addon, $controller, $action ] = explode('/', $rule);
+                        $rules[ $k ] = [
+                            'addons'     => $addon,
+                            'controller' => $controller,
+                            'action'     => $action,
+                            'indomain'   => 1,
                         ];
                     }
                     $route->domain($domain, function () use ($rules, $route, $execute) {
@@ -78,14 +78,14 @@ class Service extends \think\Service
                         }
                     });
                 } else {
-                    list($addon, $controller, $action) = explode('/', $val);
+                    [ $addon, $controller, $action ] = explode('/', $val);
                     $route->rule($key, $execute)
                         ->name($key)
                         ->completeMatch(true)
                         ->append([
-                            'addons' => $addon,
+                            'addons'     => $addon,
                             'controller' => $controller,
-                            'action' => $action
+                            'action'     => $action
                         ]);
                 }
             }
@@ -107,8 +107,8 @@ class Service extends \think\Service
                 } else {
                     $values = (array) $values;
                 }
-                $hooks[$key] = array_filter(array_map(function ($v) use ($key) {
-                    return [get_addons_class($v), $key];
+                $hooks[ $key ] = array_filter(array_map(function ($v) use ($key) {
+                    return [ get_addons_class($v), $key ];
                 }, $values));
             }
             Cache::set('hooks', $hooks);
@@ -128,7 +128,7 @@ class Service extends \think\Service
     private function loadService()
     {
         $results = scandir($this->addons_path);
-        $bind = [];
+        $bind    = [];
         foreach ($results as $name) {
             if ($name === '.' or $name === '..') {
                 continue;
@@ -177,20 +177,21 @@ class Service extends \think\Service
             // 找到插件入口文件
             if (strtolower($info['filename']) === 'plugin') {
                 // 读取出所有公共方法
-                $methods = (array)get_class_methods("\\addons\\" . $name . "\\" . $info['filename']);
+                $addonsDir = Config::get('addons.dir', 'addons');
+                $methods   = (array) get_class_methods("\\" . $addonsDir . "\\" . $name . "\\" . $info['filename']);
                 // 跟插件基类方法做比对，得到差异结果
                 $hooks = array_diff($methods, $base);
                 // 循环将钩子方法写入配置中
                 foreach ($hooks as $hook) {
-                    if (!isset($config['hooks'][$hook])) {
-                        $config['hooks'][$hook] = [];
+                    if (!isset($config['hooks'][ $hook ])) {
+                        $config['hooks'][ $hook ] = [];
                     }
                     // 兼容手动配置项
-                    if (is_string($config['hooks'][$hook])) {
-                        $config['hooks'][$hook] = explode(',', $config['hooks'][$hook]);
+                    if (is_string($config['hooks'][ $hook ])) {
+                        $config['hooks'][ $hook ] = explode(',', $config['hooks'][ $hook ]);
                     }
-                    if (!in_array($name, $config['hooks'][$hook])) {
-                        $config['hooks'][$hook][] = $name;
+                    if (!in_array($name, $config['hooks'][ $hook ])) {
+                        $config['hooks'][ $hook ][] = $name;
                     }
                 }
             }
@@ -204,8 +205,9 @@ class Service extends \think\Service
      */
     public function getAddonsPath()
     {
+        $addonsDir = Config::get('addons.dir', 'addons');
         // 初始化插件目录
-        $addons_path = $this->app->getRootPath() . 'addons' . DIRECTORY_SEPARATOR;
+        $addons_path = $this->app->getRootPath() . $addonsDir . DIRECTORY_SEPARATOR;
         // 如果插件目录不存在则创建
         if (!is_dir($addons_path)) {
             @mkdir($addons_path, 0755, true);
@@ -221,7 +223,7 @@ class Service extends \think\Service
      */
     public function getAddonsConfig()
     {
-        $name = $this->app->request->addon;
+        $name  = $this->app->request->addon;
         $addon = get_addons_instance($name);
         if (!$addon) {
             return [];
