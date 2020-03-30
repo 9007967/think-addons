@@ -11,7 +11,8 @@
 
 return [
     'autoload' => true,
-    'hooks' => [],
-    'route' => [],
-    'service' => [],
+    'hooks'    => [],
+    'route'    => [],
+    'service'  => [],
+    'dir'      => 'addons'
 ];
