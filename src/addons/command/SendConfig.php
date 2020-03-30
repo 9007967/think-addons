@@ -1,24 +1,4 @@
 <?php
-/**
- * +----------------------------------------------------------------------
- * | think-addons [基于 thinkphp6]
- * +----------------------------------------------------------------------
- *  .--,       .--,             | FILE: config.php
- * ( (  \.---./  ) )            | AUTHOR: byron sampson
- *  '.__/o   o\__.'             | EMAIL: xiaobo.sun@qq.com
- *     {=  ^  =}                | QQ: 150093589
- *      >  -  <                 | WECHAT: wx5ini99
- *     /       \                | DATETIME: 2019/10/29
- *    //       \\               |
- *   //|   .   |\\              |
- *   "'\       /'"_.-~^`'-.     |
- *      \  _  /--'         `    |
- *    ___)( )(___               |-----------------------------------------
- *   (((__) (__)))              | 高山仰止,景行行止.虽不能至,心向往之。
- * +----------------------------------------------------------------------
- * | Copyright (c) 2019 http://www.zzstudio.net All rights reserved.
- * +----------------------------------------------------------------------
- */
 
 namespace think\addons\command;
 
@@ -41,7 +21,7 @@ class SendConfig extends Command
     public function execute(Input $input, Output $output)
     {
         //获取默认配置文件
-        $content = file_get_contents(root_path() . 'vendor/zzstudio/think-addons/src/config.php');
+        $content = file_get_contents(root_path() . 'vendor/9007967/think-addons/src/config.php');
 
         $configPath = config_path() . '/';
         $configFile = $configPath . 'addons.php';
