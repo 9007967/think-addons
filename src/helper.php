@@ -35,12 +35,9 @@ spl_autoload_register(function ($class) {
             include $dir;
             return true;
         }
-
         return false;
     }
-
     return false;
-
 });
 
 if (!function_exists('hook')) {
@@ -48,14 +45,14 @@ if (!function_exists('hook')) {
      * 处理插件钩子
      * @param string     $event  钩子名称
      * @param array|null $params 传入参数
+     * @param bool       $isArray
      * @param bool       $once   是否只返回一个结果
      * @return mixed
      */
-    function hook($event, $params = null, bool $once = false)
+    function hook($event, $params = null, $isArray = false, bool $once = false)
     {
         $result = Event::trigger($event, $params, $once);
-
-        return join('', $result);
+        return $isArray ? $result : join('', $result);
     }
 }
 
@@ -174,6 +171,35 @@ if (!function_exists('addons_url')) {
             }
         }
 
-        return Route::buildUrl("@{$addonsDir}/{$addons}/{$controller}/{$action}", $param)->suffix($suffix)->domain($domain);
+        return Route::buildUrl("@{$addonsDir}/{$addons}/{$controller}-{$action}", $param)->suffix($suffix)->domain($domain);
     }
+}
+
+
+function statics_file(string $type = "header")
+{
+    $request   = app('request');
+    $name = $request->param('addon');
+    if (empty($request->plugin()) or $request->plugin() !== $name) {
+        return false;
+    }
+
+    switch ($type) {
+        case 'header':
+            $content = 'plugin/' . $name . '/style/css/' . $name . '.css';
+            break;
+        case 'footer':
+            $content = <<<EOT
+<script>
+    layui.extend({
+        {$name}: "../../../plugin/{$name}/style/js/{$name}"
+    }).use(['{$name}']);
+</script>
+
+EOT;
+            break;
+        default:
+            $content = '';
+    }
+    return $content;
 }
