@@ -45,7 +45,7 @@ class Service extends \think\Service
     {
         $this->registerRoutes(function (Route $route) {
             // 路由脚本
-            $execute = '\\think\\addons\\Route::execute';
+            $execute = '\\think\\addons\\Routes::execute';
 
             // 注册插件公共中间件
             if (is_file($this->app->addons->getAddonsPath() . 'middleware.php')) {
@@ -254,7 +254,6 @@ class Service extends \think\Service
 
     /**
      * 获取插件的配置信息
-     * @param string $name
      * @return array
      */
     public function getAddonsConfig()
