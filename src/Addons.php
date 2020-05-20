@@ -11,6 +11,8 @@ use think\facade\View;
 
 abstract class Addons
 {
+    use \app\common\service\TraitBase;
+
     // app 容器
     protected $app;
     // 请求对象
@@ -26,6 +28,11 @@ abstract class Addons
     // 插件信息
     protected $addon_info;
 
+    protected $user;
+
+    protected $AuthRule = [];
+
+
     /**
      * 插件构造函数
      * Addons constructor.
@@ -40,12 +47,52 @@ abstract class Addons
         $this->addon_config = "addon_{$this->name}_config";
         $this->addon_info   = "addon_{$this->name}_info";
         $this->view         = clone View::engine('Think');
-        $this->view->config([
-            'view_path' => $this->addon_path . 'view' . DIRECTORY_SEPARATOR
-        ]);
-
-        // 控制器初始化
+        $this->user         = $this->request->session('__user_data__');
+        $this->assign();
         $this->initialize();
+        $this->authorize();
+    }
+
+    /**
+     * 插件鉴权
+     * @return bool
+     */
+    protected function authorize()
+    {
+        $checkAuth       = Config::get('addons.check_auth');
+        $dir             = Config::get('addons.dir');
+        $request         = $this->request;
+        $request->isAuth = false;
+        $app             = $request->plugin();
+        $controller      = $request->controller(true);
+        $action          = $request->action();
+        $rule            = $dir . '::' . $app . '::' . $controller . '::' . $action;
+
+        if (!empty($app) and $request->controller(true) and isset($this->AuthRule[ $checkAuth ]['except'])) {
+            $except = $this->AuthRule[ $checkAuth ]['except'];
+            if (in_array($action, $except)) {
+                return true;
+            } else if ($app and $request->controller(true)) {
+                if (in_array($request->controller(true), [ 'admin' ])) {
+                    $user = $request->session('__admin_data__');
+                    $data = (new \app\common\middleware\CheckAdmin)->check_user_auth($rule, $user['id'] ?? 0, $user['groupid'] ?? 0);
+                } else {
+                    $user = $request->session('__user_data__');
+                    $data = model('Plugins')->where('name', $this->name)->whereFindInSet('authorize', $user['groupid'] ?? 0)->findOrEmpty();
+                }
+
+                if ($data->isEmpty()) {
+                    if ($user and $controller !== 'interface') {
+                        $request->isAuth = '你无权进行此操作';
+                    } else if ($user and $controller === 'interface') {
+                        $this->json(10001, '你无权进行此操作');
+                    } else {
+                        $loginUrl = (string) \think\facade\Route::buildUrl('/auth/login/', [ 'callback' => $request->baseUrl(true) ])->domain('home');
+                        $this->error('账号未登录', $loginUrl);
+                    }
+                }
+            }
+        }
     }
 
     // 初始化
@@ -76,6 +123,18 @@ abstract class Addons
      */
     protected function fetch($template = '', $vars = [])
     {
+        $this->view->config([
+            'view_path' => $this->addon_path . 'view' . DIRECTORY_SEPARATOR
+        ]);
+
+        if (!empty($vars['title'])) {
+            $vars['title'] = $vars['title'] . ' - 扩展应用 - ' . get_setting('Site_Name');
+        } else {
+            $vars['title'] = !empty(get_setting('Site_Info')) ? '插件中心 - ' . get_setting('Site_Name') : get_setting('Site_Name');
+        }
+        $vars['keywords']    = (isset($vars['keywords']) and !empty($vars['keywords'])) ? $vars['keywords'] : get_setting('Site_Keywords');
+        $vars['description'] = (isset($vars['description']) and !empty($vars['description'])) ? $vars['description'] : get_setting('Site_Description');
+
         return $this->view->fetch($template, $vars);
     }
 
@@ -88,34 +147,44 @@ abstract class Addons
      */
     protected function display($content = '', $vars = [])
     {
+        $this->view->config([
+            'view_path' => $this->addon_path . 'view' . DIRECTORY_SEPARATOR
+        ]);
         return $this->view->display($content, $vars);
     }
 
     /**
      * 模板变量赋值
      * @access protected
-     * @param mixed $name  要显示的模板变量
-     * @param mixed $value 变量的值
-     * @return $this
+     * @param array $array
+     * @return View
      */
-    protected function assign($name, $value = '')
+    protected function assign(array $array = [])
     {
-        $this->view->assign([ $name => $value ]);
+        $this->view->config([
+            'view_path' => $this->addon_path . 'view' . DIRECTORY_SEPARATOR
+        ]);
 
-        return $this;
+
+        $default = [
+            'BaseUrl'     => $this->request->baseUrl(true)
+            , 'ViewData'  => new \app\common\service\ViewData
+            , 'loginUser' => $this->request->session('__user_data__')
+            , 'nav'       => []
+        ];
+        return $this->view->assign(array_merge($default, $array));
     }
 
     /**
      * 初始化模板引擎
      * @access protected
      * @param array|string $engine 引擎参数
-     * @return $this
+     * @return View
      */
     protected function engine($engine)
     {
-        $this->view->engine($engine);
 
-        return $this;
+        return $this->view->engine($engine);
     }
 
     /**
@@ -138,8 +207,12 @@ abstract class Addons
             $_info['url'] = addons_url();
             $info         = array_merge($_info, $info);
         }
-        Config::set($info, $this->addon_info);
 
+        if ($db = \think\facade\Db::name('plugins')->where('name', $this->name)->find()) {
+            $info = array_merge($info, $db);
+        }
+
+        Config::set($info, $this->addon_info);
         return isset($info) ? $info : [];
     }
 
@@ -169,6 +242,12 @@ abstract class Addons
 
         return $config;
     }
+
+    //必须实现扩展中心显示方法
+    abstract public function member_extended();
+
+    //必须实现后台菜单显示方法
+    abstract public function admin_menu();
 
     //必须实现安装
     abstract public function install();
