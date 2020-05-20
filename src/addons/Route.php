@@ -9,7 +9,7 @@ use think\facade\Event;
 use think\facade\Config;
 use think\exception\HttpException;
 
-class Route
+class Routes
 {
     /**
      * 插件路由请求
