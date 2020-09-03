@@ -1,3 +1,5 @@
+本扩展由[芦虎导航](https://www.luhu.co)重构并进行分支维护
+
 # think-addons
 The ThinkPHP 6 Addons Package
 此扩展为原版zz-studio/think-addons扩展的修改版
